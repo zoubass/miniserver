@@ -7,8 +7,6 @@ import cz.luzoubek.miniserver.model.Response;
 import cz.luzoubek.miniserver.service.FileByteRetriever;
 import java.io.DataInputStream;
 import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -27,25 +25,18 @@ public class FileBytesRetrieverImpl implements FileByteRetriever {
     @Override
     public Response getBytesFromStaticFile(int numberOfBytes) {
 
-        try {
-            final File staticFile = new ClassPathResource(FILE_NAME).getFile();
+        try (DataInputStream dataInputStream = new DataInputStream(new ClassPathResource(FILE_NAME).getInputStream())) {
+            byte[] fileBytes = new byte[numberOfBytes];
 
-            try (DataInputStream dataInputStream = new DataInputStream(new FileInputStream(staticFile))) {
-                byte[] fileBytes = new byte[numberOfBytes];
+            dataInputStream.readFully(fileBytes);
+            String hex = Hex.encodeHexString(fileBytes);
+            String base64 = Base64.getEncoder().encodeToString(fileBytes);
+            String ascii = new String(fileBytes, StandardCharsets.UTF_8);
 
-                dataInputStream.readFully(fileBytes);
-                String hex = Hex.encodeHexString(fileBytes);
-                String base64 = Base64.getEncoder().encodeToString(fileBytes);
-                String ascii = new String(fileBytes, StandardCharsets.UTF_8);
-
-                FileBytesResponseData responseData = new FileBytesResponseData(hex, base64, ascii, numberOfBytes);
-                return new Response(SUCCESS_MESSAGE, responseData);
-            } catch (EOFException e) {
-                return new Response(String.format(INDEX_OUT_OF_BOUNDS_MESSAGE, numberOfBytes));
-            } catch (IOException e) {
-                return new Response(String.format(ERROR_MESSAGE, e.getMessage()));
-            }
-
+            FileBytesResponseData responseData = new FileBytesResponseData(hex, base64, ascii, numberOfBytes);
+            return new Response(SUCCESS_MESSAGE, responseData);
+        } catch (EOFException e) {
+            return new Response(String.format(INDEX_OUT_OF_BOUNDS_MESSAGE, numberOfBytes));
         } catch (IOException e) {
             return new Response(String.format(ERROR_MESSAGE, e.getMessage()));
         }
